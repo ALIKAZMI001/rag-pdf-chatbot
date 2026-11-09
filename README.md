@@ -31,6 +31,43 @@ docs/book.pdf
 | `k = 3` | Enough context for a book-length document without blowing the prompt |
 | Grounded prompt | Explicitly instructs the model to refuse rather than hallucinate |
 
+## Detailed pipeline
+
+```text
+  [ Source Document (PDF) ]
+              │
+              ▼ (PyPDFLoader)
+  ┌───────────────────────────────────────┐
+  │  RecursiveCharacterTextSplitter       │ ──► [ Overlapping 500-char chunks ]
+  └───────────────────────────────────────┘
+                                                       │
+                                                       ▼
+                                     ┌──────────────────────────────────┐
+                                     │  all-MiniLM-L6-v2 Embeddings     │
+                                     └─────────────────┬────────────────┘
+                                                       │
+                                                       ▼ (Dense 384d Vectors)
+                                     ┌──────────────────────────────────┐
+                                     │  Qdrant Local Vector Engine      │
+                                     └─────────────────┬────────────────┘
+                                                       │
+  [ User Query ] ──► [ Query Vector ] ──► (Cosine Similarity Search, top-k=3)
+                                                       │
+                                                       ▼
+                                     ┌──────────────────────────────────┐
+                                     │  Prompt Constraint Boundary      │
+                                     │  "Answer strictly from context"  │
+                                     └─────────────────┬────────────────┘
+                                                       │
+                                                       ▼
+                                     ┌──────────────────────────────────┐
+                                     │  OpenRouter LLM (Mistral / OSS)  │
+                                     └─────────────────┬────────────────┘
+                                                       │
+                                                       ▼
+                                           [ Grounded Fact-Based Answer ]
+```
+
 ## Setup
 
 ```bash
